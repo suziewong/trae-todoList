@@ -49,8 +49,8 @@
 
 1. 克隆项目
 ```bash
-git clone [你的仓库地址]
-cd trae-todolist
+git clone https://github.com/suziewong/trae-todoList.git
+cd trae-todoList
 ```
 
 2. 安装前端依赖
