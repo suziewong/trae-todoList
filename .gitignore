@@ -7,8 +7,9 @@ dist-ssr/
 build/
 
 # Environment files
-.env
 .env.*
+git add .gitignore
+
 !.env.example
 
 # Logs
