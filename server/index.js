@@ -9,8 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 创建数据库连接池
-const pool = mysql.createPool({
+// 创建初始连接池（不指定数据库）
+let pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD
@@ -23,10 +23,19 @@ async function initDatabase() {
     
     // 创建数据库
     await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_DATABASE}`);
-    await connection.query(`USE ${process.env.DB_DATABASE}`);
-    
-    // 创建todos表
-    await connection.query(`
+    connection.release();
+
+    // 重新配置连接池以包含数据库
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE
+    });
+
+    // 获取新的连接并创建表
+    const newConnection = await pool.getConnection();
+    await newConnection.query(`
       CREATE TABLE IF NOT EXISTS todos (
         id BIGINT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -36,11 +45,11 @@ async function initDatabase() {
     `);
 
     // 检查是否有数据
-    const [rows] = await connection.query('SELECT COUNT(*) as count FROM todos');
+    const [rows] = await newConnection.query('SELECT COUNT(*) as count FROM todos');
     
     // 如果没有数据，插入示例数据
     if (rows[0].count === 0) {
-      await connection.query(`
+      await newConnection.query(`
         INSERT INTO todos (id, title, completed) VALUES 
         (1, '完成项目初始化', true),
         (2, '实现前端界面', false),
@@ -50,7 +59,7 @@ async function initDatabase() {
       console.log('示例数据初始化成功');
     }
 
-    connection.release();
+    newConnection.release();
     console.log('数据库初始化成功');
   } catch (error) {
     console.error('数据库初始化失败:', error);
