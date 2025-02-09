@@ -13,21 +13,43 @@ app.use(express.json());
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE
+  password: process.env.DB_PASSWORD
 });
 
-// 创建todos表
+// 初始化数据库函数
 async function initDatabase() {
   try {
     const connection = await pool.getConnection();
+    
+    // 创建数据库
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_DATABASE}`);
+    await connection.query(`USE ${process.env.DB_DATABASE}`);
+    
+    // 创建todos表
     await connection.query(`
       CREATE TABLE IF NOT EXISTS todos (
         id BIGINT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
-        completed BOOLEAN DEFAULT false
+        completed BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // 检查是否有数据
+    const [rows] = await connection.query('SELECT COUNT(*) as count FROM todos');
+    
+    // 如果没有数据，插入示例数据
+    if (rows[0].count === 0) {
+      await connection.query(`
+        INSERT INTO todos (id, title, completed) VALUES 
+        (1, '完成项目初始化', true),
+        (2, '实现前端界面', false),
+        (3, '编写API文档', false),
+        (4, '部署应用', false)
+      `);
+      console.log('示例数据初始化成功');
+    }
+
     connection.release();
     console.log('数据库初始化成功');
   } catch (error) {
